@@ -4,30 +4,41 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
-import Layout from "@/components/ui/Layout";
-import Dashboard from "@/pages/Dashboard";
-import MongoCollections from "@/pages/MongoCollections";
-import MongoQueries from "@/pages/MongoQueries";
-import MongoAggregations from "@/pages/MongoAggregations";
-import Neo4jGraphs from "@/pages/Neo4jGraphs";
-import Neo4jRelationships from "@/pages/Neo4jRelationships";
-import Neo4jCypher from "@/pages/Neo4jCypher";
-import DataBridge from "@/pages/DataBridge";
-import SyncHistory from "@/pages/SyncHistory";
+import Layout from "./components/layout/layout";
+
+// Importación simulada de nuestras páginas (las crearemos más adelante)
+// Para simplificar, temporalmente las definimos como componentes básicos
+const DashboardPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Dashboard</h1><p>Bienvenido al sistema de gestión de inventario Violetta</p></div>;
+const ProductosPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Gestión de Productos</h1></div>;
+const ClientesPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Gestión de Clientes</h1></div>;
+const TransaccionesPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Transacciones</h1></div>;
+const ReportesPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Reportes</h1></div>;
+const ConfiguracionPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Configuración</h1></div>;
+const AuthPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Iniciar Sesión</h1></div>;
 
 function Router() {
+  // Simulamos un estado de autenticación (siempre autenticado para este ejemplo)
+  const isAuthenticated = true;
+
   return (
     <Layout>
       <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/mongodb/collections" component={MongoCollections} />
-        <Route path="/mongodb/queries" component={MongoQueries} />
-        <Route path="/mongodb/aggregations" component={MongoAggregations} />
-        <Route path="/neo4j/graphs" component={Neo4jGraphs} />
-        <Route path="/neo4j/relationships" component={Neo4jRelationships} />
-        <Route path="/neo4j/cypher" component={Neo4jCypher} />
-        <Route path="/integration/data-bridge" component={DataBridge} />
-        <Route path="/integration/sync-history" component={SyncHistory} />
+        {/* Ruta pública */}
+        <Route path="/auth" component={AuthPage} />
+
+        {/* Rutas protegidas */}
+        {isAuthenticated && (
+          <>
+            <Route path="/" component={DashboardPage} />
+            <Route path="/productos" component={ProductosPage} />
+            <Route path="/clientes" component={ClientesPage} />
+            <Route path="/transacciones" component={TransaccionesPage} />
+            <Route path="/reportes" component={ReportesPage} />
+            <Route path="/configuracion" component={ConfiguracionPage} />
+          </>
+        )}
+
+        {/* Ruta 404 */}
         <Route component={NotFound} />
       </Switch>
     </Layout>
