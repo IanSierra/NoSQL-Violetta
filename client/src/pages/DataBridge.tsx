@@ -231,21 +231,21 @@ const DataBridge = () => {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create Integration Mapping</DialogTitle>
+              <DialogTitle>Crear Mapeo de Integración</DialogTitle>
               <DialogDescription>
-                Connect MongoDB collections with Neo4j node types for data synchronization
+                Conecta colecciones de MongoDB con tipos de nodos Neo4j para sincronización de datos
               </DialogDescription>
             </DialogHeader>
             
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="sourceCollection" className="text-right">
-                  Source Collection
+                  Colección Origen
                 </Label>
                 <div className="col-span-3">
                   <Select value={selectedCollection} onValueChange={setSelectedCollection}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select MongoDB collection" />
+                      <SelectValue placeholder="Seleccionar colección MongoDB" />
                     </SelectTrigger>
                     <SelectContent>
                       {collections?.map(collection => (
@@ -260,17 +260,17 @@ const DataBridge = () => {
               
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="syncType" className="text-right">
-                  Sync Type
+                  Tipo de Sincronización
                 </Label>
                 <div className="col-span-3">
                   <Select value={syncType} onValueChange={setSyncType}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select sync type" />
+                      <SelectValue placeholder="Seleccionar tipo de sincronización" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="MongoDB → Neo4j">MongoDB → Neo4j (One-way)</SelectItem>
-                      <SelectItem value="Bidirectional">Bidirectional (Two-way)</SelectItem>
-                      <SelectItem value="Neo4j → MongoDB">Neo4j → MongoDB (One-way)</SelectItem>
+                      <SelectItem value="MongoDB → Neo4j">MongoDB → Neo4j (Unidireccional)</SelectItem>
+                      <SelectItem value="Bidirectional">Bidireccional</SelectItem>
+                      <SelectItem value="Neo4j → MongoDB">Neo4j → MongoDB (Unidireccional)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -278,12 +278,12 @@ const DataBridge = () => {
               
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="targetNodeType" className="text-right">
-                  Target Node Type
+                  Tipo de Nodo Destino
                 </Label>
                 <div className="col-span-3">
                   <Select value={selectedNodeType} onValueChange={setSelectedNodeType}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select Neo4j node type" />
+                      <SelectValue placeholder="Seleccionar tipo de nodo Neo4j" />
                     </SelectTrigger>
                     <SelectContent>
                       {nodeTypes?.map(nodeType => (
@@ -299,14 +299,14 @@ const DataBridge = () => {
             
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsNewMappingOpen(false)}>
-                Cancel
+                Cancelar
               </Button>
               <Button 
                 className="bg-[#3D89FF] hover:bg-blue-600 text-white"
                 onClick={handleCreateMapping}
                 disabled={createMappingMutation.isPending}
               >
-                {createMappingMutation.isPending ? "Creating..." : "Create Mapping"}
+                {createMappingMutation.isPending ? "Creando..." : "Crear Mapeo"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -397,7 +397,7 @@ const DataBridge = () => {
                               onClick={() => handleSyncData(mapping.id)}
                               disabled={syncDataMutation.isPending}
                             >
-                              {syncDataMutation.isPending ? "Syncing..." : "Sync Now"}
+                              {syncDataMutation.isPending ? "Sincronizando..." : "Sincronizar"}
                             </Button>
                             <Button 
                               variant="outline" 
