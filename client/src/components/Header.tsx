@@ -11,34 +11,36 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const Header = () => {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
 
   // Get page title from location
   const getPageTitle = () => {
     switch (location) {
       case "/":
-        return "Dashboard";
+        return "Panel Principal";
       case "/mongodb/collections":
-        return "MongoDB Collections";
+        return "Colecciones MongoDB";
       case "/mongodb/queries":
-        return "MongoDB Queries";
+        return "Consultas MongoDB";
       case "/mongodb/aggregations":
-        return "MongoDB Aggregations";
+        return "Agregaciones MongoDB";
       case "/neo4j/graphs":
-        return "Neo4j Graphs";
+        return "Grafos Neo4j";
       case "/neo4j/relationships":
-        return "Neo4j Relationships";
+        return "Relaciones Neo4j";
       case "/neo4j/cypher":
-        return "Neo4j Cypher";
+        return "Cypher Neo4j";
       case "/integration/data-bridge":
-        return "Data Bridge";
+        return "Puente de Datos";
       case "/integration/sync-history":
-        return "Sync History";
+        return "Historial de Sincronización";
       default:
-        return "Dashboard";
+        return "Panel Principal";
     }
   };
 
@@ -65,7 +67,7 @@ const Header = () => {
         <div className="relative hidden sm:block">
           <Input 
             type="text" 
-            placeholder="Search..." 
+            placeholder="Buscar..." 
             className="py-1.5 pl-8 pr-4 w-64"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -85,11 +87,11 @@ const Header = () => {
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
-            <DropdownMenuItem>Help</DropdownMenuItem>
+            <DropdownMenuItem>Perfil</DropdownMenuItem>
+            <DropdownMenuItem>Configuración</DropdownMenuItem>
+            <DropdownMenuItem>Ayuda</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-500">Logout</DropdownMenuItem>
+            <DropdownMenuItem className="text-red-500">Cerrar Sesión</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
