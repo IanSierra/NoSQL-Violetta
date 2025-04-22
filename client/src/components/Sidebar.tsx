@@ -41,7 +41,7 @@ const Sidebar = () => {
 
   return (
     <div className={cn("relative", sidebarOpen ? "w-64" : "w-16")}>
-      <div className={cn("h-full flex flex-col bg-neutral-dark text-white transition-all duration-300 ease-in-out", sidebarOpen ? "w-64" : "w-16")}>
+      <div className={cn("h-full flex flex-col bg-[#1c2434] text-white transition-all duration-300 ease-in-out", sidebarOpen ? "w-64" : "w-16")}>
         {/* Logo */}
         <div className="flex items-center h-16 px-4 border-b border-white/10">
           <svg className="h-8 w-8" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">

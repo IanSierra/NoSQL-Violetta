@@ -315,17 +315,17 @@ const DataBridge = () => {
       
       <Tabs defaultValue="mappings" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="mappings">Integration Mappings</TabsTrigger>
-          <TabsTrigger value="configuration">Configuration</TabsTrigger>
-          <TabsTrigger value="schema">Schema Mapping</TabsTrigger>
+          <TabsTrigger value="mappings">Mapeos de Integración</TabsTrigger>
+          <TabsTrigger value="configuration">Configuración</TabsTrigger>
+          <TabsTrigger value="schema">Mapeo de Esquema</TabsTrigger>
         </TabsList>
         
         <TabsContent value="mappings" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Data Integration Mappings</CardTitle>
+              <CardTitle>Mapeos de Integración de Datos</CardTitle>
               <CardDescription>
-                Configured mappings between MongoDB collections and Neo4j node types
+                Mapeos configurados entre colecciones MongoDB y tipos de nodos Neo4j
               </CardDescription>
             </CardHeader>
             
@@ -339,15 +339,15 @@ const DataBridge = () => {
                       <circle cx="12" cy="12" r="10"></circle>
                     </svg>
                   </div>
-                  <h3 className="text-lg font-medium mb-2">No Integration Mappings</h3>
+                  <h3 className="text-lg font-medium mb-2">No Hay Mapeos de Integración</h3>
                   <p className="text-neutral-medium text-sm max-w-md mx-auto mb-6">
-                    Create your first mapping to start synchronizing data between MongoDB and Neo4j
+                    Crea tu primer mapeo para comenzar a sincronizar datos entre MongoDB y Neo4j
                   </p>
                   <Button 
                     className="bg-[#3D89FF] hover:bg-blue-600 text-white"
                     onClick={() => setIsNewMappingOpen(true)}
                   >
-                    Create First Mapping
+                    Crear Primer Mapeo
                   </Button>
                 </div>
               ) : (
@@ -355,12 +355,12 @@ const DataBridge = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>MongoDB Collection</TableHead>
-                        <TableHead>Neo4j Node Type</TableHead>
-                        <TableHead>Sync Type</TableHead>
-                        <TableHead>Last Sync</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead>Colección MongoDB</TableHead>
+                        <TableHead>Tipo de Nodo Neo4j</TableHead>
+                        <TableHead>Tipo de Sincronización</TableHead>
+                        <TableHead>Última Sincronización</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
