@@ -1,113 +1,105 @@
-import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// MongoDB Collection Schema
-export const mongoCollections = pgTable("mongo_collections", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
-  documentCount: integer("document_count").notNull().default(0),
-  storageSize: integer("storage_size").notNull().default(0),
-  status: text("status").notNull().default("active"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+// Esquema para MongoDB (sin usar Drizzle ORM para PostgreSQL)
+
+// Esquema para Productos (Vestidos y Accesorios)
+export const productoSchema = z.object({
+  _id: z.string().optional(), // MongoDB genera esto automáticamente
+  codigo: z.string().min(3),
+  nombre: z.string().min(3),
+  descripcion: z.string().min(5),
+  categoria: z.enum(["vestido", "accesorio", "calzado"]),
+  subcategoria: z.string().optional(),
+  precio: z.number().positive(),
+  precioRenta: z.number().positive().optional(),
+  stock: z.number().int().min(0),
+  stockMinimo: z.number().int().min(0).default(1),
+  tallas: z.array(z.string()).optional(),
+  colores: z.array(z.string()).optional(),
+  imagenes: z.array(z.string()).optional(),
+  activo: z.boolean().default(true),
+  destacado: z.boolean().default(false),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
 });
 
-export const insertMongoCollectionSchema = createInsertSchema(mongoCollections).pick({
-  name: true,
-  documentCount: true,
-  storageSize: true,
-  status: true,
+// Esquema para Clientes
+export const clienteSchema = z.object({
+  _id: z.string().optional(),
+  nombre: z.string().min(3),
+  apellidos: z.string().min(3),
+  email: z.string().email().optional(),
+  telefono: z.string().min(10).optional(),
+  direccion: z.string().optional(),
+  historialCompras: z.array(z.string()).optional(), // Referencias a IDs de transacciones
+  historialRentas: z.array(z.string()).optional(), // Referencias a IDs de transacciones
+  fechaNacimiento: z.date().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
 });
 
-// Neo4j Node Types Schema
-export const neo4jNodeTypes = pgTable("neo4j_node_types", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
-  nodeCount: integer("node_count").notNull().default(0),
-  color: text("color").notNull(),
-  status: text("status").notNull().default("active"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+// Esquema para Transacciones (Ventas y Rentas)
+export const transaccionSchema = z.object({
+  _id: z.string().optional(),
+  tipo: z.enum(["venta", "renta"]),
+  clienteId: z.string(),
+  productos: z.array(z.object({
+    productoId: z.string(),
+    cantidad: z.number().int().positive(),
+    precio: z.number().positive(),
+    esRenta: z.boolean().default(false),
+    fechaDevolucion: z.date().optional()
+  })),
+  total: z.number().positive(),
+  metodoPago: z.enum(["efectivo", "tarjeta", "transferencia"]),
+  estado: z.enum(["pendiente", "completada", "cancelada"]),
+  fechaCreacion: z.date().optional(),
+  fechaActualizacion: z.date().optional(),
+  // Solo para rentas
+  fechaInicio: z.date().optional(),
+  fechaFinalizacion: z.date().optional(),
+  deposito: z.number().optional(),
+  depositoDevuelto: z.boolean().optional()
 });
 
-export const insertNeo4jNodeTypeSchema = createInsertSchema(neo4jNodeTypes).pick({
-  name: true,
-  nodeCount: true,
-  color: true,
-  status: true,
+// Esquema para usuarios del sistema
+export const usuarioSchema = z.object({
+  _id: z.string().optional(),
+  nombre: z.string().min(3),
+  email: z.string().email(),
+  password: z.string().min(6),
+  rol: z.enum(["admin", "vendedor", "inventario"]),
+  activo: z.boolean().default(true),
+  ultimoAcceso: z.date().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
 });
 
-// Integration Mappings Schema
-export const integrationMappings = pgTable("integration_mappings", {
-  id: serial("id").primaryKey(),
-  sourceCollection: text("source_collection").notNull(),
-  targetNodeType: text("target_node_type").notNull(),
-  syncType: text("sync_type").notNull(),
-  lastSync: timestamp("last_sync"),
-  status: text("status").notNull().default("active"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+// Esquema para eventos (bitácora)
+export const eventoSchema = z.object({
+  _id: z.string().optional(),
+  tipo: z.enum(["login", "logout", "creacion", "modificacion", "eliminacion"]),
+  usuario: z.string(), // ID del usuario que realizó la acción
+  descripcion: z.string(),
+  entidad: z.enum(["producto", "cliente", "transaccion", "usuario"]),
+  entidadId: z.string(),
+  datosAnteriores: z.record(z.any()).optional(),
+  datosNuevos: z.record(z.any()).optional(),
+  fecha: z.date().optional(),
 });
 
-export const insertIntegrationMappingSchema = createInsertSchema(integrationMappings).pick({
-  sourceCollection: true,
-  targetNodeType: true,
-  syncType: true,
-  status: true,
-});
+// Tipos inferidos a partir de los esquemas
+export type Producto = z.infer<typeof productoSchema>;
+export type ProductoInsert = Omit<Producto, "_id" | "createdAt" | "updatedAt">;
 
-// Sync History Schema
-export const syncHistories = pgTable("sync_histories", {
-  id: serial("id").primaryKey(),
-  mappingId: integer("mapping_id").notNull(),
-  recordsUpdated: integer("records_updated").notNull().default(0),
-  recordsCreated: integer("records_created").notNull().default(0),
-  status: text("status").notNull(),
-  message: text("message"),
-  startedAt: timestamp("started_at").notNull().defaultNow(),
-  completedAt: timestamp("completed_at"),
-});
+export type Cliente = z.infer<typeof clienteSchema>;
+export type ClienteInsert = Omit<Cliente, "_id" | "createdAt" | "updatedAt">;
 
-export const insertSyncHistorySchema = createInsertSchema(syncHistories).pick({
-  mappingId: true,
-  recordsUpdated: true,
-  recordsCreated: true,
-  status: true,
-  message: true,
-});
+export type Transaccion = z.infer<typeof transaccionSchema>;
+export type TransaccionInsert = Omit<Transaccion, "_id" | "fechaCreacion" | "fechaActualizacion">;
 
-// Performance Metrics Schema
-export const performanceMetrics = pgTable("performance_metrics", {
-  id: serial("id").primaryKey(),
-  operationType: text("operation_type").notNull(),
-  mongoDbTime: integer("mongodb_time").notNull(),
-  neo4jTime: integer("neo4j_time").notNull(),
-  sqlTime: integer("sql_time").notNull(),
-  bestPerformer: text("best_performer").notNull(),
-  recordedAt: timestamp("recorded_at").notNull().defaultNow(),
-});
+export type Usuario = z.infer<typeof usuarioSchema>;
+export type UsuarioInsert = Omit<Usuario, "_id" | "createdAt" | "updatedAt" | "ultimoAcceso">;
 
-export const insertPerformanceMetricSchema = createInsertSchema(performanceMetrics).pick({
-  operationType: true,
-  mongoDbTime: true,
-  neo4jTime: true,
-  sqlTime: true,
-  bestPerformer: true,
-});
-
-// Define types using schema inference
-export type MongoCollection = typeof mongoCollections.$inferSelect;
-export type InsertMongoCollection = z.infer<typeof insertMongoCollectionSchema>;
-
-export type Neo4jNodeType = typeof neo4jNodeTypes.$inferSelect;
-export type InsertNeo4jNodeType = z.infer<typeof insertNeo4jNodeTypeSchema>;
-
-export type IntegrationMapping = typeof integrationMappings.$inferSelect;
-export type InsertIntegrationMapping = z.infer<typeof insertIntegrationMappingSchema>;
-
-export type SyncHistory = typeof syncHistories.$inferSelect;
-export type InsertSyncHistory = z.infer<typeof insertSyncHistorySchema>;
-
-export type PerformanceMetric = typeof performanceMetrics.$inferSelect;
-export type InsertPerformanceMetric = z.infer<typeof insertPerformanceMetricSchema>;
+export type Evento = z.infer<typeof eventoSchema>;
+export type EventoInsert = Omit<Evento, "_id" | "fecha">;

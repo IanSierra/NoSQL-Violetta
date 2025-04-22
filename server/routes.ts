@@ -2,328 +2,582 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
-  insertMongoCollectionSchema, 
-  insertNeo4jNodeTypeSchema, 
-  insertIntegrationMappingSchema, 
-  insertSyncHistorySchema, 
-  insertPerformanceMetricSchema 
+  productoSchema, 
+  clienteSchema, 
+  transaccionSchema, 
+  usuarioSchema, 
+  eventoSchema 
 } from "@shared/schema";
+import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
-  // MongoDB Collections routes
-  app.get("/api/mongo-collections", async (req: Request, res: Response) => {
+  // Rutas para Productos
+  app.get("/api/productos", async (req: Request, res: Response) => {
     try {
-      const collections = await storage.getMongoCollections();
-      res.json(collections);
+      const productos = await storage.getProductos();
+      res.json(productos);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch MongoDB collections", error: String(error) });
+      res.status(500).json({ message: "Error al obtener productos", error: String(error) });
     }
   });
 
-  app.get("/api/mongo-collections/:id", async (req: Request, res: Response) => {
+  app.get("/api/productos/:id", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      const collection = await storage.getMongoCollection(id);
+      const id = req.params.id;
+      const producto = await storage.getProducto(id);
       
-      if (!collection) {
-        return res.status(404).json({ message: "MongoDB collection not found" });
+      if (!producto) {
+        return res.status(404).json({ message: "Producto no encontrado" });
       }
       
-      res.json(collection);
+      res.json(producto);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch MongoDB collection", error: String(error) });
+      res.status(500).json({ message: "Error al obtener producto", error: String(error) });
     }
   });
 
-  app.post("/api/mongo-collections", async (req: Request, res: Response) => {
+  app.post("/api/productos", async (req: Request, res: Response) => {
     try {
-      const parsed = insertMongoCollectionSchema.safeParse(req.body);
+      const parsed = productoSchema.omit({ _id: true, createdAt: true, updatedAt: true }).safeParse(req.body);
       
       if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid collection data", errors: parsed.error.format() });
+        return res.status(400).json({ message: "Datos de producto inválidos", errors: parsed.error.format() });
       }
       
-      const collection = await storage.createMongoCollection(parsed.data);
-      res.status(201).json(collection);
+      const producto = await storage.createProducto(parsed.data);
+      res.status(201).json(producto);
     } catch (error) {
-      res.status(500).json({ message: "Failed to create MongoDB collection", error: String(error) });
+      res.status(500).json({ message: "Error al crear producto", error: String(error) });
     }
   });
 
-  app.put("/api/mongo-collections/:id", async (req: Request, res: Response) => {
+  app.put("/api/productos/:id", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      const parsed = insertMongoCollectionSchema.partial().safeParse(req.body);
+      const id = req.params.id;
+      const parsed = productoSchema.omit({ _id: true, createdAt: true, updatedAt: true }).partial().safeParse(req.body);
       
       if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid collection update data", errors: parsed.error.format() });
+        return res.status(400).json({ message: "Datos de actualización inválidos", errors: parsed.error.format() });
       }
       
-      const updatedCollection = await storage.updateMongoCollection(id, parsed.data);
+      const productoActualizado = await storage.updateProducto(id, parsed.data);
       
-      if (!updatedCollection) {
-        return res.status(404).json({ message: "MongoDB collection not found" });
+      if (!productoActualizado) {
+        return res.status(404).json({ message: "Producto no encontrado" });
       }
       
-      res.json(updatedCollection);
+      res.json(productoActualizado);
     } catch (error) {
-      res.status(500).json({ message: "Failed to update MongoDB collection", error: String(error) });
+      res.status(500).json({ message: "Error al actualizar producto", error: String(error) });
     }
   });
 
-  app.delete("/api/mongo-collections/:id", async (req: Request, res: Response) => {
+  app.delete("/api/productos/:id", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      const deleted = await storage.deleteMongoCollection(id);
+      const id = req.params.id;
+      const deleted = await storage.deleteProducto(id);
       
       if (!deleted) {
-        return res.status(404).json({ message: "MongoDB collection not found" });
+        return res.status(404).json({ message: "Producto no encontrado" });
       }
       
       res.status(204).end();
     } catch (error) {
-      res.status(500).json({ message: "Failed to delete MongoDB collection", error: String(error) });
+      res.status(500).json({ message: "Error al eliminar producto", error: String(error) });
     }
   });
 
-  // Neo4j Node Types routes
-  app.get("/api/neo4j-node-types", async (req: Request, res: Response) => {
+  app.get("/api/productos/categoria/:categoria/bajo-stock", async (req: Request, res: Response) => {
     try {
-      const nodeTypes = await storage.getNeo4jNodeTypes();
-      res.json(nodeTypes);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch Neo4j node types", error: String(error) });
-    }
-  });
-
-  app.get("/api/neo4j-node-types/:id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const nodeType = await storage.getNeo4jNodeType(id);
+      const categoria = req.params.categoria;
+      const stockMinimo = parseInt(req.query.stockMinimo as string) || 5;
       
-      if (!nodeType) {
-        return res.status(404).json({ message: "Neo4j node type not found" });
+      const productos = await storage.getProductosByCategoriaAndStock(categoria, stockMinimo);
+      res.json(productos);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener productos con bajo stock", error: String(error) });
+    }
+  });
+
+  // Rutas para Clientes
+  app.get("/api/clientes", async (req: Request, res: Response) => {
+    try {
+      const clientes = await storage.getClientes();
+      res.json(clientes);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener clientes", error: String(error) });
+    }
+  });
+
+  app.get("/api/clientes/:id", async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      const cliente = await storage.getCliente(id);
+      
+      if (!cliente) {
+        return res.status(404).json({ message: "Cliente no encontrado" });
       }
       
-      res.json(nodeType);
+      res.json(cliente);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch Neo4j node type", error: String(error) });
+      res.status(500).json({ message: "Error al obtener cliente", error: String(error) });
     }
   });
 
-  app.post("/api/neo4j-node-types", async (req: Request, res: Response) => {
+  app.post("/api/clientes", async (req: Request, res: Response) => {
     try {
-      const parsed = insertNeo4jNodeTypeSchema.safeParse(req.body);
+      const parsed = clienteSchema.omit({ _id: true, createdAt: true, updatedAt: true, historialCompras: true, historialRentas: true }).safeParse(req.body);
       
       if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid node type data", errors: parsed.error.format() });
+        return res.status(400).json({ message: "Datos de cliente inválidos", errors: parsed.error.format() });
       }
       
-      const nodeType = await storage.createNeo4jNodeType(parsed.data);
-      res.status(201).json(nodeType);
+      const cliente = await storage.createCliente(parsed.data);
+      res.status(201).json(cliente);
     } catch (error) {
-      res.status(500).json({ message: "Failed to create Neo4j node type", error: String(error) });
+      res.status(500).json({ message: "Error al crear cliente", error: String(error) });
     }
   });
 
-  app.put("/api/neo4j-node-types/:id", async (req: Request, res: Response) => {
+  app.put("/api/clientes/:id", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      const parsed = insertNeo4jNodeTypeSchema.partial().safeParse(req.body);
+      const id = req.params.id;
+      const parsed = clienteSchema.omit({ _id: true, createdAt: true, updatedAt: true, historialCompras: true, historialRentas: true }).partial().safeParse(req.body);
       
       if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid node type update data", errors: parsed.error.format() });
+        return res.status(400).json({ message: "Datos de actualización inválidos", errors: parsed.error.format() });
       }
       
-      const updatedNodeType = await storage.updateNeo4jNodeType(id, parsed.data);
+      const clienteActualizado = await storage.updateCliente(id, parsed.data);
       
-      if (!updatedNodeType) {
-        return res.status(404).json({ message: "Neo4j node type not found" });
+      if (!clienteActualizado) {
+        return res.status(404).json({ message: "Cliente no encontrado" });
       }
       
-      res.json(updatedNodeType);
+      res.json(clienteActualizado);
     } catch (error) {
-      res.status(500).json({ message: "Failed to update Neo4j node type", error: String(error) });
+      res.status(500).json({ message: "Error al actualizar cliente", error: String(error) });
     }
   });
 
-  app.delete("/api/neo4j-node-types/:id", async (req: Request, res: Response) => {
+  app.delete("/api/clientes/:id", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      const deleted = await storage.deleteNeo4jNodeType(id);
+      const id = req.params.id;
+      const deleted = await storage.deleteCliente(id);
       
       if (!deleted) {
-        return res.status(404).json({ message: "Neo4j node type not found" });
+        return res.status(404).json({ message: "Cliente no encontrado" });
       }
       
       res.status(204).end();
     } catch (error) {
-      res.status(500).json({ message: "Failed to delete Neo4j node type", error: String(error) });
+      res.status(500).json({ message: "Error al eliminar cliente", error: String(error) });
     }
   });
 
-  // Integration Mappings routes
-  app.get("/api/integration-mappings", async (req: Request, res: Response) => {
+  // Rutas para Transacciones
+  app.get("/api/transacciones", async (req: Request, res: Response) => {
     try {
-      const mappings = await storage.getIntegrationMappings();
-      res.json(mappings);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch integration mappings", error: String(error) });
-    }
-  });
-
-  app.get("/api/integration-mappings/:id", async (req: Request, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const mapping = await storage.getIntegrationMapping(id);
+      const tipo = req.query.tipo as 'venta' | 'renta' | undefined;
       
-      if (!mapping) {
-        return res.status(404).json({ message: "Integration mapping not found" });
+      let transacciones;
+      if (tipo) {
+        transacciones = await storage.getTransaccionesByTipo(tipo);
+      } else {
+        transacciones = await storage.getTransacciones();
       }
       
-      res.json(mapping);
+      res.json(transacciones);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch integration mapping", error: String(error) });
+      res.status(500).json({ message: "Error al obtener transacciones", error: String(error) });
     }
   });
 
-  app.post("/api/integration-mappings", async (req: Request, res: Response) => {
+  app.get("/api/transacciones/:id", async (req: Request, res: Response) => {
     try {
-      const parsed = insertIntegrationMappingSchema.safeParse(req.body);
+      const id = req.params.id;
+      const transaccion = await storage.getTransaccion(id);
+      
+      if (!transaccion) {
+        return res.status(404).json({ message: "Transacción no encontrada" });
+      }
+      
+      res.json(transaccion);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener transacción", error: String(error) });
+    }
+  });
+
+  app.get("/api/transacciones/cliente/:clienteId", async (req: Request, res: Response) => {
+    try {
+      const clienteId = req.params.clienteId;
+      const transacciones = await storage.getTransaccionesByCliente(clienteId);
+      res.json(transacciones);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener transacciones del cliente", error: String(error) });
+    }
+  });
+
+  app.post("/api/transacciones", async (req: Request, res: Response) => {
+    try {
+      const parsed = transaccionSchema.omit({ _id: true, fechaCreacion: true, fechaActualizacion: true }).safeParse(req.body);
       
       if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid mapping data", errors: parsed.error.format() });
+        return res.status(400).json({ message: "Datos de transacción inválidos", errors: parsed.error.format() });
       }
       
-      const mapping = await storage.createIntegrationMapping(parsed.data);
-      res.status(201).json(mapping);
+      const transaccion = await storage.createTransaccion(parsed.data);
+      res.status(201).json(transaccion);
     } catch (error) {
-      res.status(500).json({ message: "Failed to create integration mapping", error: String(error) });
+      res.status(500).json({ message: "Error al crear transacción", error: String(error) });
     }
   });
 
-  app.put("/api/integration-mappings/:id", async (req: Request, res: Response) => {
+  app.put("/api/transacciones/:id", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      const parsed = insertIntegrationMappingSchema.partial().safeParse(req.body);
+      const id = req.params.id;
+      const parsed = transaccionSchema.omit({ _id: true, fechaCreacion: true, fechaActualizacion: true }).partial().safeParse(req.body);
       
       if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid mapping update data", errors: parsed.error.format() });
+        return res.status(400).json({ message: "Datos de actualización inválidos", errors: parsed.error.format() });
       }
       
-      const updatedMapping = await storage.updateIntegrationMapping(id, parsed.data);
+      const transaccionActualizada = await storage.updateTransaccion(id, parsed.data);
       
-      if (!updatedMapping) {
-        return res.status(404).json({ message: "Integration mapping not found" });
+      if (!transaccionActualizada) {
+        return res.status(404).json({ message: "Transacción no encontrada" });
       }
       
-      res.json(updatedMapping);
+      res.json(transaccionActualizada);
     } catch (error) {
-      res.status(500).json({ message: "Failed to update integration mapping", error: String(error) });
+      res.status(500).json({ message: "Error al actualizar transacción", error: String(error) });
     }
   });
 
-  app.post("/api/integration-mappings/:id/sync", async (req: Request, res: Response) => {
+  app.delete("/api/transacciones/:id", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      const mapping = await storage.getIntegrationMapping(id);
+      const id = req.params.id;
+      const deleted = await storage.deleteTransaccion(id);
       
-      if (!mapping) {
-        return res.status(404).json({ message: "Integration mapping not found" });
+      if (!deleted) {
+        return res.status(404).json({ message: "Transacción no encontrada" });
       }
       
-      // Create a sync history record for this operation
-      const syncHistory = await storage.createSyncHistory({
-        mappingId: id,
-        recordsUpdated: 0,
-        recordsCreated: 0,
-        status: "started",
-        message: "Data synchronization started"
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Error al eliminar transacción", error: String(error) });
+    }
+  });
+
+  // Rutas para Usuarios
+  app.get("/api/usuarios", async (req: Request, res: Response) => {
+    try {
+      const usuarios = await storage.getUsuarios();
+      // No enviar las contraseñas al cliente
+      const usuariosSinPassword = usuarios.map(usuario => {
+        const { password, ...usuarioSinPassword } = usuario;
+        return usuarioSinPassword;
+      });
+      res.json(usuariosSinPassword);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener usuarios", error: String(error) });
+    }
+  });
+
+  app.get("/api/usuarios/:id", async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      const usuario = await storage.getUsuario(id);
+      
+      if (!usuario) {
+        return res.status(404).json({ message: "Usuario no encontrado" });
+      }
+      
+      // No enviar la contraseña al cliente
+      const { password, ...usuarioSinPassword } = usuario;
+      res.json(usuarioSinPassword);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener usuario", error: String(error) });
+    }
+  });
+
+  app.post("/api/usuarios", async (req: Request, res: Response) => {
+    try {
+      const parsed = usuarioSchema.omit({ _id: true, createdAt: true, updatedAt: true, ultimoAcceso: true }).safeParse(req.body);
+      
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Datos de usuario inválidos", errors: parsed.error.format() });
+      }
+      
+      // Verificar si ya existe un usuario con el mismo email
+      const usuarioExistente = await storage.getUsuarioByEmail(parsed.data.email);
+      if (usuarioExistente) {
+        return res.status(400).json({ message: "Ya existe un usuario con este email" });
+      }
+      
+      const usuario = await storage.createUsuario(parsed.data);
+      
+      // No enviar la contraseña al cliente
+      const { password, ...usuarioSinPassword } = usuario;
+      res.status(201).json(usuarioSinPassword);
+    } catch (error) {
+      res.status(500).json({ message: "Error al crear usuario", error: String(error) });
+    }
+  });
+
+  app.put("/api/usuarios/:id", async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      const parsed = usuarioSchema.omit({ _id: true, createdAt: true, updatedAt: true, ultimoAcceso: true }).partial().safeParse(req.body);
+      
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Datos de actualización inválidos", errors: parsed.error.format() });
+      }
+      
+      // Si se está actualizando el email, verificar que no exista otro usuario con ese email
+      if (parsed.data.email) {
+        const usuarioConEmail = await storage.getUsuarioByEmail(parsed.data.email);
+        if (usuarioConEmail && usuarioConEmail._id !== id) {
+          return res.status(400).json({ message: "Ya existe otro usuario con este email" });
+        }
+      }
+      
+      const usuarioActualizado = await storage.updateUsuario(id, parsed.data);
+      
+      if (!usuarioActualizado) {
+        return res.status(404).json({ message: "Usuario no encontrado" });
+      }
+      
+      // No enviar la contraseña al cliente
+      const { password, ...usuarioSinPassword } = usuarioActualizado;
+      res.json(usuarioSinPassword);
+    } catch (error) {
+      res.status(500).json({ message: "Error al actualizar usuario", error: String(error) });
+    }
+  });
+
+  app.delete("/api/usuarios/:id", async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      const deleted = await storage.deleteUsuario(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Usuario no encontrado" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Error al eliminar usuario", error: String(error) });
+    }
+  });
+
+  // Ruta para autenticación
+  app.post("/api/auth/login", async (req: Request, res: Response) => {
+    try {
+      const loginSchema = z.object({
+        email: z.string().email(),
+        password: z.string().min(1)
       });
       
-      // Simulate successful synchronization
-      // In a real application, this would involve actual data transfer between databases
-      const recordsUpdated = Math.floor(Math.random() * 100) + 1;
-      const recordsCreated = Math.floor(Math.random() * 20);
+      const parsed = loginSchema.safeParse(req.body);
       
-      // Update the sync history to indicate completion
-      const completedSync = await storage.completeSyncHistory(
-        syncHistory.id,
-        recordsUpdated,
-        recordsCreated,
-        "success",
-        "Data synchronization completed successfully"
-      );
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Datos de inicio de sesión inválidos", errors: parsed.error.format() });
+      }
       
-      // Update the mapping's last sync timestamp
-      const updatedMapping = await storage.updateIntegrationMappingSync(id);
+      const { email, password } = parsed.data;
+      const usuario = await storage.authenticateUsuario(email, password);
+      
+      if (!usuario) {
+        return res.status(401).json({ message: "Credenciales inválidas" });
+      }
+      
+      // No enviar la contraseña al cliente
+      const { password: _, ...usuarioSinPassword } = usuario;
+      
+      // Registrar evento de inicio de sesión
+      await storage.createEvento({
+        tipo: "login",
+        usuario: usuario._id!,
+        descripcion: `Inicio de sesión del usuario ${usuario.nombre} (${usuario.email})`,
+        entidad: "usuario",
+        entidadId: usuario._id!
+      });
       
       res.json({
-        mapping: updatedMapping,
-        syncOperation: completedSync
+        usuario: usuarioSinPassword,
+        token: `token_simulado_${Date.now()}` // En una implementación real, se generaría un JWT
       });
     } catch (error) {
-      res.status(500).json({ message: "Failed to synchronize data", error: String(error) });
+      res.status(500).json({ message: "Error en la autenticación", error: String(error) });
     }
   });
 
-  app.delete("/api/integration-mappings/:id", async (req: Request, res: Response) => {
+  // Rutas para Eventos (Bitácora)
+  app.get("/api/eventos", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      const deleted = await storage.deleteIntegrationMapping(id);
-      
-      if (!deleted) {
-        return res.status(404).json({ message: "Integration mapping not found" });
-      }
-      
-      res.status(204).end();
+      const eventos = await storage.getEventos();
+      res.json(eventos);
     } catch (error) {
-      res.status(500).json({ message: "Failed to delete integration mapping", error: String(error) });
+      res.status(500).json({ message: "Error al obtener eventos", error: String(error) });
     }
   });
 
-  // Sync History routes
-  app.get("/api/sync-histories", async (req: Request, res: Response) => {
+  app.get("/api/eventos/usuario/:usuarioId", async (req: Request, res: Response) => {
     try {
-      const mappingId = req.query.mappingId ? parseInt(req.query.mappingId as string) : undefined;
-      
-      let histories;
-      if (mappingId) {
-        histories = await storage.getSyncHistoriesByMappingId(mappingId);
-      } else {
-        histories = await storage.getSyncHistories();
-      }
-      
-      res.json(histories);
+      const usuarioId = req.params.usuarioId;
+      const eventos = await storage.getEventosByUsuario(usuarioId);
+      res.json(eventos);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch sync histories", error: String(error) });
+      res.status(500).json({ message: "Error al obtener eventos del usuario", error: String(error) });
     }
   });
-
-  // Performance Metrics routes
-  app.get("/api/performance-metrics", async (req: Request, res: Response) => {
+  
+  app.get("/api/eventos/entidad/:entidad/:entidadId", async (req: Request, res: Response) => {
     try {
-      const metrics = await storage.getPerformanceMetrics();
-      res.json(metrics);
+      const { entidad, entidadId } = req.params;
+      const eventos = await storage.getEventosByEntidad(entidad, entidadId);
+      res.json(eventos);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch performance metrics", error: String(error) });
+      res.status(500).json({ message: "Error al obtener eventos de la entidad", error: String(error) });
     }
   });
 
-  app.post("/api/performance-metrics", async (req: Request, res: Response) => {
+  app.post("/api/eventos", async (req: Request, res: Response) => {
     try {
-      const parsed = insertPerformanceMetricSchema.safeParse(req.body);
+      const parsed = eventoSchema.omit({ _id: true, fecha: true }).safeParse(req.body);
       
       if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid performance metric data", errors: parsed.error.format() });
+        return res.status(400).json({ message: "Datos de evento inválidos", errors: parsed.error.format() });
       }
       
-      const metric = await storage.createPerformanceMetric(parsed.data);
-      res.status(201).json(metric);
+      const evento = await storage.createEvento(parsed.data);
+      res.status(201).json(evento);
     } catch (error) {
-      res.status(500).json({ message: "Failed to create performance metric", error: String(error) });
+      res.status(500).json({ message: "Error al crear evento", error: String(error) });
+    }
+  });
+
+  // Dashboard Data
+  app.get("/api/dashboard/stats", async (req: Request, res: Response) => {
+    try {
+      const productos = await storage.getProductos();
+      const clientes = await storage.getClientes();
+      const transacciones = await storage.getTransacciones();
+      
+      // Total de productos
+      const totalProductos = productos.length;
+      
+      // Total de clientes
+      const totalClientes = clientes.length;
+      
+      // Ventas del día
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const ventasHoy = transacciones.filter(t => 
+        t.tipo === 'venta' && 
+        t.fechaCreacion && 
+        new Date(t.fechaCreacion) >= hoy
+      );
+      
+      // Total de ventas del día
+      const totalVentasHoy = ventasHoy.reduce((sum, venta) => sum + venta.total, 0);
+      
+      // Productos con bajo stock
+      const bajosDeStock = productos.filter(p => p.stock <= p.stockMinimo);
+      
+      res.json({
+        totalProductos,
+        totalClientes,
+        ventasHoy: ventasHoy.length,
+        totalVentasHoy,
+        productosBajoStock: bajosDeStock.length
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener estadísticas del dashboard", error: String(error) });
+    }
+  });
+
+  app.get("/api/dashboard/productos-bajo-stock", async (req: Request, res: Response) => {
+    try {
+      const productos = await storage.getProductos();
+      const bajosDeStock = productos
+        .filter(p => p.stock <= p.stockMinimo)
+        .sort((a, b) => a.stock - b.stock); // Ordenar por stock ascendente
+      
+      res.json(bajosDeStock);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener productos con bajo stock", error: String(error) });
+    }
+  });
+
+  app.get("/api/dashboard/ventas-recientes", async (req: Request, res: Response) => {
+    try {
+      const transacciones = await storage.getTransacciones();
+      const ventasRecientes = transacciones
+        .filter(t => t.tipo === 'venta')
+        .sort((a, b) => {
+          const dateA = a.fechaCreacion ? new Date(a.fechaCreacion).getTime() : 0;
+          const dateB = b.fechaCreacion ? new Date(b.fechaCreacion).getTime() : 0;
+          return dateB - dateA; // Ordenar por fecha más reciente
+        })
+        .slice(0, 5); // Últimas 5 ventas
+      
+      // Obtener información del cliente para cada venta
+      const ventasConCliente = await Promise.all(
+        ventasRecientes.map(async (venta) => {
+          const cliente = await storage.getCliente(venta.clienteId);
+          return {
+            ...venta,
+            cliente: cliente ? { nombre: cliente.nombre, apellidos: cliente.apellidos } : null
+          };
+        })
+      );
+      
+      res.json(ventasConCliente);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener ventas recientes", error: String(error) });
+    }
+  });
+
+  app.get("/api/dashboard/proximas-devoluciones", async (req: Request, res: Response) => {
+    try {
+      const hoy = new Date();
+      const transacciones = await storage.getTransacciones();
+      
+      // Obtener rentas con fecha de devolución próxima (en los próximos 7 días)
+      const proximaSemana = new Date();
+      proximaSemana.setDate(proximaSemana.getDate() + 7);
+      
+      const proximasDevoluciones = transacciones
+        .filter(t => 
+          t.tipo === 'renta' && 
+          t.fechaFinalizacion && 
+          new Date(t.fechaFinalizacion) >= hoy && 
+          new Date(t.fechaFinalizacion) <= proximaSemana
+        )
+        .sort((a, b) => {
+          const dateA = a.fechaFinalizacion ? new Date(a.fechaFinalizacion).getTime() : 0;
+          const dateB = b.fechaFinalizacion ? new Date(b.fechaFinalizacion).getTime() : 0;
+          return dateA - dateB; // Ordenar por fecha más cercana primero
+        });
+      
+      // Obtener información del cliente para cada renta
+      const devolucionesConCliente = await Promise.all(
+        proximasDevoluciones.map(async (renta) => {
+          const cliente = await storage.getCliente(renta.clienteId);
+          return {
+            ...renta,
+            cliente: cliente ? { nombre: cliente.nombre, apellidos: cliente.apellidos } : null
+          };
+        })
+      );
+      
+      res.json(devolucionesConCliente);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener próximas devoluciones", error: String(error) });
     }
   });
 

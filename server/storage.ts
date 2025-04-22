@@ -1,338 +1,467 @@
 import { 
-  MongoCollection, InsertMongoCollection, 
-  Neo4jNodeType, InsertNeo4jNodeType,
-  IntegrationMapping, InsertIntegrationMapping,
-  SyncHistory, InsertSyncHistory,
-  PerformanceMetric, InsertPerformanceMetric,
-  mongoCollections, neo4jNodeTypes, integrationMappings, syncHistories, performanceMetrics
+  Producto, ProductoInsert,
+  Cliente, ClienteInsert,
+  Transaccion, TransaccionInsert,
+  Usuario, UsuarioInsert,
+  Evento, EventoInsert
 } from "@shared/schema";
 
-// Interface for database storage operations
+// Interfaz para las operaciones de almacenamiento de la base de datos MongoDB
 export interface IStorage {
-  // MongoDB Collections operations
-  getMongoCollections(): Promise<MongoCollection[]>;
-  getMongoCollection(id: number): Promise<MongoCollection | undefined>;
-  getMongoCollectionByName(name: string): Promise<MongoCollection | undefined>;
-  createMongoCollection(collection: InsertMongoCollection): Promise<MongoCollection>;
-  updateMongoCollection(id: number, collection: Partial<InsertMongoCollection>): Promise<MongoCollection | undefined>;
-  deleteMongoCollection(id: number): Promise<boolean>;
+  // Operaciones de Productos
+  getProductos(): Promise<Producto[]>;
+  getProducto(id: string): Promise<Producto | undefined>;
+  getProductosByCategoriaAndStock(categoria: string, stockMinimo: number): Promise<Producto[]>;
+  createProducto(producto: ProductoInsert): Promise<Producto>;
+  updateProducto(id: string, producto: Partial<ProductoInsert>): Promise<Producto | undefined>;
+  deleteProducto(id: string): Promise<boolean>;
 
-  // Neo4j Node Types operations
-  getNeo4jNodeTypes(): Promise<Neo4jNodeType[]>;
-  getNeo4jNodeType(id: number): Promise<Neo4jNodeType | undefined>;
-  getNeo4jNodeTypeByName(name: string): Promise<Neo4jNodeType | undefined>;
-  createNeo4jNodeType(nodeType: InsertNeo4jNodeType): Promise<Neo4jNodeType>;
-  updateNeo4jNodeType(id: number, nodeType: Partial<InsertNeo4jNodeType>): Promise<Neo4jNodeType | undefined>;
-  deleteNeo4jNodeType(id: number): Promise<boolean>;
+  // Operaciones de Clientes
+  getClientes(): Promise<Cliente[]>;
+  getCliente(id: string): Promise<Cliente | undefined>;
+  createCliente(cliente: ClienteInsert): Promise<Cliente>;
+  updateCliente(id: string, cliente: Partial<ClienteInsert>): Promise<Cliente | undefined>;
+  deleteCliente(id: string): Promise<boolean>;
 
-  // Integration Mappings operations
-  getIntegrationMappings(): Promise<IntegrationMapping[]>;
-  getIntegrationMapping(id: number): Promise<IntegrationMapping | undefined>;
-  createIntegrationMapping(mapping: InsertIntegrationMapping): Promise<IntegrationMapping>;
-  updateIntegrationMapping(id: number, mapping: Partial<InsertIntegrationMapping>): Promise<IntegrationMapping | undefined>;
-  updateIntegrationMappingSync(id: number): Promise<IntegrationMapping | undefined>;
-  deleteIntegrationMapping(id: number): Promise<boolean>;
+  // Operaciones de Transacciones
+  getTransacciones(): Promise<Transaccion[]>;
+  getTransaccionesByTipo(tipo: 'venta' | 'renta'): Promise<Transaccion[]>;
+  getTransaccion(id: string): Promise<Transaccion | undefined>;
+  getTransaccionesByCliente(clienteId: string): Promise<Transaccion[]>;
+  createTransaccion(transaccion: TransaccionInsert): Promise<Transaccion>;
+  updateTransaccion(id: string, transaccion: Partial<TransaccionInsert>): Promise<Transaccion | undefined>;
+  deleteTransaccion(id: string): Promise<boolean>;
 
-  // Sync History operations
-  getSyncHistories(): Promise<SyncHistory[]>;
-  getSyncHistoriesByMappingId(mappingId: number): Promise<SyncHistory[]>;
-  createSyncHistory(history: InsertSyncHistory): Promise<SyncHistory>;
-  completeSyncHistory(id: number, recordsUpdated: number, recordsCreated: number, status: string, message?: string): Promise<SyncHistory | undefined>;
+  // Operaciones de Usuarios
+  getUsuarios(): Promise<Usuario[]>;
+  getUsuario(id: string): Promise<Usuario | undefined>;
+  getUsuarioByEmail(email: string): Promise<Usuario | undefined>;
+  createUsuario(usuario: UsuarioInsert): Promise<Usuario>;
+  updateUsuario(id: string, usuario: Partial<UsuarioInsert>): Promise<Usuario | undefined>;
+  deleteUsuario(id: string): Promise<boolean>;
+  authenticateUsuario(email: string, password: string): Promise<Usuario | undefined>;
 
-  // Performance Metrics operations
-  getPerformanceMetrics(): Promise<PerformanceMetric[]>;
-  createPerformanceMetric(metric: InsertPerformanceMetric): Promise<PerformanceMetric>;
+  // Operaciones de Eventos
+  getEventos(): Promise<Evento[]>;
+  getEvento(id: string): Promise<Evento | undefined>;
+  getEventosByUsuario(usuarioId: string): Promise<Evento[]>;
+  getEventosByEntidad(entidad: string, entidadId: string): Promise<Evento[]>;
+  createEvento(evento: EventoInsert): Promise<Evento>;
 }
 
 export class MemStorage implements IStorage {
-  private mongoCollectionsData: Map<number, MongoCollection>;
-  private neo4jNodeTypesData: Map<number, Neo4jNodeType>;
-  private integrationMappingsData: Map<number, IntegrationMapping>;
-  private syncHistoriesData: Map<number, SyncHistory>;
-  private performanceMetricsData: Map<number, PerformanceMetric>;
+  private productosData: Map<string, Producto> = new Map();
+  private clientesData: Map<string, Cliente> = new Map();
+  private transaccionesData: Map<string, Transaccion> = new Map();
+  private usuariosData: Map<string, Usuario> = new Map();
+  private eventosData: Map<string, Evento> = new Map();
   
-  private collectionId: number;
-  private nodeTypeId: number;
-  private mappingId: number;
-  private syncHistoryId: number;
-  private metricId: number;
+  private nextId = 1;
 
   constructor() {
-    this.mongoCollectionsData = new Map();
-    this.neo4jNodeTypesData = new Map();
-    this.integrationMappingsData = new Map();
-    this.syncHistoriesData = new Map();
-    this.performanceMetricsData = new Map();
-    
-    this.collectionId = 1;
-    this.nodeTypeId = 1;
-    this.mappingId = 1;
-    this.syncHistoryId = 1;
-    this.metricId = 1;
-
-    // Initialize with sample data
+    // Inicializar con datos de muestra
     this.initializeData();
   }
 
+  private generateId(prefix: string): string {
+    return `${prefix}_${(this.nextId++).toString().padStart(4, '0')}`;
+  }
+
   private initializeData() {
-    // Add sample MongoDB collections
-    const collections = [
-      { name: "users", documentCount: 12458, storageSize: 42800, status: "active" },
-      { name: "products", documentCount: 3721, storageSize: 18300, status: "active" },
-      { name: "orders", documentCount: 28935, storageSize: 156200, status: "active" },
-      { name: "reviews", documentCount: 8142, storageSize: 23700, status: "active" }
+    // Añadir productos de muestra
+    const productos: ProductoInsert[] = [
+      {
+        codigo: "VES-001",
+        nombre: "Vestido de Novia Elegancia",
+        descripcion: "Vestido de novia con encaje y pedrería",
+        categoria: "vestido",
+        subcategoria: "novia",
+        precio: 4500,
+        precioRenta: 1200,
+        stock: 3,
+        stockMinimo: 1,
+        tallas: ["S", "M", "L"],
+        colores: ["Blanco", "Marfil"],
+        imagenes: ["vestido_novia_1.jpg", "vestido_novia_2.jpg"],
+        activo: true,
+        destacado: true
+      },
+      {
+        codigo: "VES-002",
+        nombre: "Vestido de Quince Primavera",
+        descripcion: "Vestido de quinceañera con capas y tul",
+        categoria: "vestido",
+        subcategoria: "quinceañera",
+        precio: 3200,
+        precioRenta: 800,
+        stock: 5,
+        stockMinimo: 2,
+        tallas: ["S", "M", "L", "XL"],
+        colores: ["Rosa", "Azul", "Lila"],
+        imagenes: ["vestido_quince_1.jpg"],
+        activo: true,
+        destacado: true
+      },
+      {
+        codigo: "ACC-001",
+        nombre: "Tiara Princesa",
+        descripcion: "Tiara con cristales y perlas",
+        categoria: "accesorio",
+        subcategoria: "tiara",
+        precio: 450,
+        stock: 10,
+        stockMinimo: 3,
+        colores: ["Plateado", "Dorado"],
+        imagenes: ["tiara_1.jpg"],
+        activo: true,
+        destacado: false
+      },
+      {
+        codigo: "CAL-001",
+        nombre: "Zapatillas de Novia Perla",
+        descripcion: "Zapatillas de novia con perlas y tacón bajo",
+        categoria: "calzado",
+        subcategoria: "novia",
+        precio: 850,
+        precioRenta: 250,
+        stock: 4,
+        stockMinimo: 1,
+        tallas: ["35", "36", "37", "38"],
+        colores: ["Blanco", "Champagne"],
+        imagenes: ["zapatillas_1.jpg"],
+        activo: true,
+        destacado: false
+      },
+      {
+        codigo: "VES-003",
+        nombre: "Vestido de Gala Noche",
+        descripcion: "Vestido de gala para eventos formales",
+        categoria: "vestido",
+        subcategoria: "gala",
+        precio: 2800,
+        precioRenta: 700,
+        stock: 2,
+        stockMinimo: 1,
+        tallas: ["M", "L"],
+        colores: ["Negro", "Rojo", "Azul Marino"],
+        imagenes: ["vestido_gala_1.jpg"],
+        activo: true,
+        destacado: true
+      }
     ];
     
-    collections.forEach(collection => {
-      this.createMongoCollection(collection);
+    productos.forEach(producto => {
+      this.createProducto(producto);
     });
 
-    // Add sample Neo4j node types
-    const nodeTypes = [
-      { name: "User", nodeCount: 785, color: "#1F4F9E", status: "active" },
-      { name: "Order", nodeCount: 2415, color: "#4A77D6", status: "active" },
-      { name: "Product", nodeCount: 158, color: "#13AA52", status: "active" }
+    // Añadir clientes de muestra
+    const clientes: ClienteInsert[] = [
+      {
+        nombre: "Ana",
+        apellidos: "García López",
+        email: "ana.garcia@email.com",
+        telefono: "5512345678",
+        direccion: "Calle Principal 123, Colonia Centro"
+      },
+      {
+        nombre: "Sofía",
+        apellidos: "Martínez Ruiz",
+        email: "sofia.martinez@email.com",
+        telefono: "5598765432",
+        direccion: "Av. Reforma 456, Colonia Juárez"
+      },
+      {
+        nombre: "María",
+        apellidos: "Rodríguez Sánchez",
+        email: "maria.rodriguez@email.com",
+        telefono: "5523456789",
+        direccion: "Calle Independencia 789, Colonia Roma"
+      }
     ];
     
-    nodeTypes.forEach(nodeType => {
-      this.createNeo4jNodeType(nodeType);
+    clientes.forEach(cliente => {
+      this.createCliente(cliente);
     });
 
-    // Add sample integration mappings
-    const mappings = [
-      { sourceCollection: "users", targetNodeType: "User", syncType: "Bidirectional", status: "active" },
-      { sourceCollection: "products", targetNodeType: "Product", syncType: "MongoDB → Neo4j", status: "active" },
-      { sourceCollection: "orders", targetNodeType: "Order", syncType: "MongoDB → Neo4j", status: "active" }
+    // Añadir usuarios de muestra
+    const usuarios: UsuarioInsert[] = [
+      {
+        nombre: "Administrador",
+        email: "admin@violetta.com",
+        password: "admin123",
+        rol: "admin",
+        activo: true
+      },
+      {
+        nombre: "Vendedor",
+        email: "vendedor@violetta.com",
+        password: "vendedor123",
+        rol: "vendedor",
+        activo: true
+      },
+      {
+        nombre: "Encargado de Inventario",
+        email: "inventario@violetta.com",
+        password: "inventario123",
+        rol: "inventario",
+        activo: true
+      }
     ];
     
-    mappings.forEach(mapping => {
-      this.createIntegrationMapping(mapping);
-    });
-
-    // Add sample sync histories
-    const histories = [
-      { mappingId: 1, recordsUpdated: 23, recordsCreated: 2, status: "success", message: "Sync completed successfully" },
-      { mappingId: 2, recordsUpdated: 5, recordsCreated: 0, status: "success", message: "Sync completed successfully" },
-      { mappingId: 3, recordsUpdated: 86, recordsCreated: 12, status: "success", message: "Sync completed successfully" }
-    ];
-    
-    histories.forEach(history => {
-      this.createSyncHistory(history);
-    });
-
-    // Add sample performance metrics
-    const metrics = [
-      { operationType: "Simple CRUD operations", mongoDbTime: 12, neo4jTime: 28, sqlTime: 18, bestPerformer: "MongoDB" },
-      { operationType: "Multi-level relationships", mongoDbTime: 156, neo4jTime: 45, sqlTime: 320, bestPerformer: "Neo4j" },
-      { operationType: "Complex aggregations", mongoDbTime: 87, neo4jTime: 134, sqlTime: 95, bestPerformer: "MongoDB" },
-      { operationType: "Path finding", mongoDbTime: 245, neo4jTime: 38, sqlTime: 352, bestPerformer: "Neo4j" },
-      { operationType: "Full-text search", mongoDbTime: 42, neo4jTime: 68, sqlTime: 112, bestPerformer: "MongoDB" }
-    ];
-    
-    metrics.forEach(metric => {
-      this.createPerformanceMetric(metric);
+    usuarios.forEach(usuario => {
+      this.createUsuario(usuario);
     });
   }
 
-  // MongoDB Collections operations
-  async getMongoCollections(): Promise<MongoCollection[]> {
-    return Array.from(this.mongoCollectionsData.values());
+  // Implementación de métodos para Productos
+  async getProductos(): Promise<Producto[]> {
+    return Array.from(this.productosData.values());
   }
 
-  async getMongoCollection(id: number): Promise<MongoCollection | undefined> {
-    return this.mongoCollectionsData.get(id);
+  async getProducto(id: string): Promise<Producto | undefined> {
+    return this.productosData.get(id);
   }
 
-  async getMongoCollectionByName(name: string): Promise<MongoCollection | undefined> {
-    return Array.from(this.mongoCollectionsData.values()).find(
-      collection => collection.name === name
+  async getProductosByCategoriaAndStock(categoria: string, stockMinimo: number): Promise<Producto[]> {
+    return Array.from(this.productosData.values()).filter(
+      producto => producto.categoria === categoria && producto.stock <= stockMinimo
     );
   }
 
-  async createMongoCollection(collection: InsertMongoCollection): Promise<MongoCollection> {
-    const id = this.collectionId++;
+  async createProducto(producto: ProductoInsert): Promise<Producto> {
+    const id = this.generateId('PROD');
     const now = new Date();
-    const newCollection: MongoCollection = {
-      ...collection,
-      id,
+    const nuevoProducto: Producto = {
+      ...producto,
+      _id: id,
       createdAt: now,
       updatedAt: now
     };
-    this.mongoCollectionsData.set(id, newCollection);
-    return newCollection;
+    this.productosData.set(id, nuevoProducto);
+    return nuevoProducto;
   }
 
-  async updateMongoCollection(id: number, collection: Partial<InsertMongoCollection>): Promise<MongoCollection | undefined> {
-    const existingCollection = this.mongoCollectionsData.get(id);
-    if (!existingCollection) return undefined;
+  async updateProducto(id: string, producto: Partial<ProductoInsert>): Promise<Producto | undefined> {
+    const productoExistente = this.productosData.get(id);
+    if (!productoExistente) return undefined;
 
-    const updatedCollection: MongoCollection = {
-      ...existingCollection,
-      ...collection,
+    const productoActualizado: Producto = {
+      ...productoExistente,
+      ...producto,
       updatedAt: new Date()
     };
-    this.mongoCollectionsData.set(id, updatedCollection);
-    return updatedCollection;
+    this.productosData.set(id, productoActualizado);
+    return productoActualizado;
   }
 
-  async deleteMongoCollection(id: number): Promise<boolean> {
-    return this.mongoCollectionsData.delete(id);
+  async deleteProducto(id: string): Promise<boolean> {
+    return this.productosData.delete(id);
   }
 
-  // Neo4j Node Types operations
-  async getNeo4jNodeTypes(): Promise<Neo4jNodeType[]> {
-    return Array.from(this.neo4jNodeTypesData.values());
+  // Implementación de métodos para Clientes
+  async getClientes(): Promise<Cliente[]> {
+    return Array.from(this.clientesData.values());
   }
 
-  async getNeo4jNodeType(id: number): Promise<Neo4jNodeType | undefined> {
-    return this.neo4jNodeTypesData.get(id);
+  async getCliente(id: string): Promise<Cliente | undefined> {
+    return this.clientesData.get(id);
   }
 
-  async getNeo4jNodeTypeByName(name: string): Promise<Neo4jNodeType | undefined> {
-    return Array.from(this.neo4jNodeTypesData.values()).find(
-      nodeType => nodeType.name === name
+  async createCliente(cliente: ClienteInsert): Promise<Cliente> {
+    const id = this.generateId('CLI');
+    const now = new Date();
+    const nuevoCliente: Cliente = {
+      ...cliente,
+      _id: id,
+      historialCompras: [],
+      historialRentas: [],
+      createdAt: now,
+      updatedAt: now
+    };
+    this.clientesData.set(id, nuevoCliente);
+    return nuevoCliente;
+  }
+
+  async updateCliente(id: string, cliente: Partial<ClienteInsert>): Promise<Cliente | undefined> {
+    const clienteExistente = this.clientesData.get(id);
+    if (!clienteExistente) return undefined;
+
+    const clienteActualizado: Cliente = {
+      ...clienteExistente,
+      ...cliente,
+      updatedAt: new Date()
+    };
+    this.clientesData.set(id, clienteActualizado);
+    return clienteActualizado;
+  }
+
+  async deleteCliente(id: string): Promise<boolean> {
+    return this.clientesData.delete(id);
+  }
+
+  // Implementación de métodos para Transacciones
+  async getTransacciones(): Promise<Transaccion[]> {
+    return Array.from(this.transaccionesData.values());
+  }
+
+  async getTransaccionesByTipo(tipo: 'venta' | 'renta'): Promise<Transaccion[]> {
+    return Array.from(this.transaccionesData.values()).filter(
+      transaccion => transaccion.tipo === tipo
     );
   }
 
-  async createNeo4jNodeType(nodeType: InsertNeo4jNodeType): Promise<Neo4jNodeType> {
-    const id = this.nodeTypeId++;
-    const now = new Date();
-    const newNodeType: Neo4jNodeType = {
-      ...nodeType,
-      id,
-      createdAt: now,
-      updatedAt: now
-    };
-    this.neo4jNodeTypesData.set(id, newNodeType);
-    return newNodeType;
+  async getTransaccion(id: string): Promise<Transaccion | undefined> {
+    return this.transaccionesData.get(id);
   }
 
-  async updateNeo4jNodeType(id: number, nodeType: Partial<InsertNeo4jNodeType>): Promise<Neo4jNodeType | undefined> {
-    const existingNodeType = this.neo4jNodeTypesData.get(id);
-    if (!existingNodeType) return undefined;
-
-    const updatedNodeType: Neo4jNodeType = {
-      ...existingNodeType,
-      ...nodeType,
-      updatedAt: new Date()
-    };
-    this.neo4jNodeTypesData.set(id, updatedNodeType);
-    return updatedNodeType;
-  }
-
-  async deleteNeo4jNodeType(id: number): Promise<boolean> {
-    return this.neo4jNodeTypesData.delete(id);
-  }
-
-  // Integration Mappings operations
-  async getIntegrationMappings(): Promise<IntegrationMapping[]> {
-    return Array.from(this.integrationMappingsData.values());
-  }
-
-  async getIntegrationMapping(id: number): Promise<IntegrationMapping | undefined> {
-    return this.integrationMappingsData.get(id);
-  }
-
-  async createIntegrationMapping(mapping: InsertIntegrationMapping): Promise<IntegrationMapping> {
-    const id = this.mappingId++;
-    const now = new Date();
-    const newMapping: IntegrationMapping = {
-      ...mapping,
-      id,
-      lastSync: null,
-      createdAt: now,
-      updatedAt: now
-    };
-    this.integrationMappingsData.set(id, newMapping);
-    return newMapping;
-  }
-
-  async updateIntegrationMapping(id: number, mapping: Partial<InsertIntegrationMapping>): Promise<IntegrationMapping | undefined> {
-    const existingMapping = this.integrationMappingsData.get(id);
-    if (!existingMapping) return undefined;
-
-    const updatedMapping: IntegrationMapping = {
-      ...existingMapping,
-      ...mapping,
-      updatedAt: new Date()
-    };
-    this.integrationMappingsData.set(id, updatedMapping);
-    return updatedMapping;
-  }
-
-  async updateIntegrationMappingSync(id: number): Promise<IntegrationMapping | undefined> {
-    const existingMapping = this.integrationMappingsData.get(id);
-    if (!existingMapping) return undefined;
-
-    const updatedMapping: IntegrationMapping = {
-      ...existingMapping,
-      lastSync: new Date(),
-      updatedAt: new Date()
-    };
-    this.integrationMappingsData.set(id, updatedMapping);
-    return updatedMapping;
-  }
-
-  async deleteIntegrationMapping(id: number): Promise<boolean> {
-    return this.integrationMappingsData.delete(id);
-  }
-
-  // Sync History operations
-  async getSyncHistories(): Promise<SyncHistory[]> {
-    return Array.from(this.syncHistoriesData.values());
-  }
-
-  async getSyncHistoriesByMappingId(mappingId: number): Promise<SyncHistory[]> {
-    return Array.from(this.syncHistoriesData.values()).filter(
-      history => history.mappingId === mappingId
+  async getTransaccionesByCliente(clienteId: string): Promise<Transaccion[]> {
+    return Array.from(this.transaccionesData.values()).filter(
+      transaccion => transaccion.clienteId === clienteId
     );
   }
 
-  async createSyncHistory(history: InsertSyncHistory): Promise<SyncHistory> {
-    const id = this.syncHistoryId++;
+  async createTransaccion(transaccion: TransaccionInsert): Promise<Transaccion> {
+    const id = this.generateId(transaccion.tipo === 'venta' ? 'VEN' : 'REN');
     const now = new Date();
-    const newHistory: SyncHistory = {
-      ...history,
-      id,
-      startedAt: now,
-      completedAt: null
+    const nuevaTransaccion: Transaccion = {
+      ...transaccion,
+      _id: id,
+      fechaCreacion: now,
+      fechaActualizacion: now
     };
-    this.syncHistoriesData.set(id, newHistory);
-    return newHistory;
+    this.transaccionesData.set(id, nuevaTransaccion);
+
+    // Actualizar historial del cliente
+    const cliente = await this.getCliente(transaccion.clienteId);
+    if (cliente) {
+      if (transaccion.tipo === 'venta') {
+        cliente.historialCompras = [...(cliente.historialCompras || []), id];
+      } else {
+        cliente.historialRentas = [...(cliente.historialRentas || []), id];
+      }
+      await this.updateCliente(cliente._id!, cliente);
+    }
+
+    // Actualizar stock de productos
+    for (const item of transaccion.productos) {
+      const producto = await this.getProducto(item.productoId);
+      if (producto) {
+        producto.stock = Math.max(0, producto.stock - item.cantidad);
+        await this.updateProducto(producto._id!, producto);
+      }
+    }
+
+    return nuevaTransaccion;
   }
 
-  async completeSyncHistory(id: number, recordsUpdated: number, recordsCreated: number, status: string, message?: string): Promise<SyncHistory | undefined> {
-    const existingHistory = this.syncHistoriesData.get(id);
-    if (!existingHistory) return undefined;
+  async updateTransaccion(id: string, transaccion: Partial<TransaccionInsert>): Promise<Transaccion | undefined> {
+    const transaccionExistente = this.transaccionesData.get(id);
+    if (!transaccionExistente) return undefined;
 
-    const updatedHistory: SyncHistory = {
-      ...existingHistory,
-      recordsUpdated,
-      recordsCreated,
-      status,
-      message: message || existingHistory.message,
-      completedAt: new Date()
+    const transaccionActualizada: Transaccion = {
+      ...transaccionExistente,
+      ...transaccion,
+      fechaActualizacion: new Date()
     };
-    this.syncHistoriesData.set(id, updatedHistory);
-    return updatedHistory;
+    this.transaccionesData.set(id, transaccionActualizada);
+    return transaccionActualizada;
   }
 
-  // Performance Metrics operations
-  async getPerformanceMetrics(): Promise<PerformanceMetric[]> {
-    return Array.from(this.performanceMetricsData.values());
+  async deleteTransaccion(id: string): Promise<boolean> {
+    return this.transaccionesData.delete(id);
   }
 
-  async createPerformanceMetric(metric: InsertPerformanceMetric): Promise<PerformanceMetric> {
-    const id = this.metricId++;
-    const newMetric: PerformanceMetric = {
-      ...metric,
-      id,
-      recordedAt: new Date()
+  // Implementación de métodos para Usuarios
+  async getUsuarios(): Promise<Usuario[]> {
+    return Array.from(this.usuariosData.values());
+  }
+
+  async getUsuario(id: string): Promise<Usuario | undefined> {
+    return this.usuariosData.get(id);
+  }
+
+  async getUsuarioByEmail(email: string): Promise<Usuario | undefined> {
+    return Array.from(this.usuariosData.values()).find(
+      usuario => usuario.email === email
+    );
+  }
+
+  async createUsuario(usuario: UsuarioInsert): Promise<Usuario> {
+    const id = this.generateId('USR');
+    const now = new Date();
+    const nuevoUsuario: Usuario = {
+      ...usuario,
+      _id: id,
+      ultimoAcceso: null,
+      createdAt: now,
+      updatedAt: now
     };
-    this.performanceMetricsData.set(id, newMetric);
-    return newMetric;
+    this.usuariosData.set(id, nuevoUsuario);
+    return nuevoUsuario;
+  }
+
+  async updateUsuario(id: string, usuario: Partial<UsuarioInsert>): Promise<Usuario | undefined> {
+    const usuarioExistente = this.usuariosData.get(id);
+    if (!usuarioExistente) return undefined;
+
+    const usuarioActualizado: Usuario = {
+      ...usuarioExistente,
+      ...usuario,
+      updatedAt: new Date()
+    };
+    this.usuariosData.set(id, usuarioActualizado);
+    return usuarioActualizado;
+  }
+
+  async deleteUsuario(id: string): Promise<boolean> {
+    return this.usuariosData.delete(id);
+  }
+
+  async authenticateUsuario(email: string, password: string): Promise<Usuario | undefined> {
+    const usuario = await this.getUsuarioByEmail(email);
+    if (!usuario || usuario.password !== password || !usuario.activo) {
+      return undefined;
+    }
+    
+    usuario.ultimoAcceso = new Date();
+    await this.updateUsuario(usuario._id!, { ultimoAcceso: usuario.ultimoAcceso } as any);
+    
+    return usuario;
+  }
+
+  // Implementación de métodos para Eventos
+  async getEventos(): Promise<Evento[]> {
+    return Array.from(this.eventosData.values());
+  }
+
+  async getEvento(id: string): Promise<Evento | undefined> {
+    return this.eventosData.get(id);
+  }
+
+  async getEventosByUsuario(usuarioId: string): Promise<Evento[]> {
+    return Array.from(this.eventosData.values()).filter(
+      evento => evento.usuario === usuarioId
+    );
+  }
+
+  async getEventosByEntidad(entidad: string, entidadId: string): Promise<Evento[]> {
+    return Array.from(this.eventosData.values()).filter(
+      evento => evento.entidad === entidad && evento.entidadId === entidadId
+    );
+  }
+
+  async createEvento(evento: EventoInsert): Promise<Evento> {
+    const id = this.generateId('EVT');
+    const now = new Date();
+    const nuevoEvento: Evento = {
+      ...evento,
+      _id: id,
+      fecha: now
+    };
+    this.eventosData.set(id, nuevoEvento);
+    return nuevoEvento;
   }
 }
 
-// Create and export a single instance of the storage
+// Crear y exportar una única instancia del almacenamiento
 export const storage = new MemStorage();
