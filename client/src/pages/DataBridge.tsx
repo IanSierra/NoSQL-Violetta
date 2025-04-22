@@ -57,6 +57,9 @@ const DataBridge = () => {
   const { data: mappings, isLoading: isLoadingMappings } = useQuery({
     queryKey: ["/api/integration-mappings"],
   });
+  
+  // Para confirmar eliminación
+  const [mappingToDelete, setMappingToDelete] = useState<number | null>(null);
 
   // Create new integration mapping
   const createMappingMutation = useMutation({
@@ -106,6 +109,29 @@ const DataBridge = () => {
       });
     },
   });
+  
+  // Delete mapping
+  const deleteMappingMutation = useMutation({
+    mutationFn: async (mappingId: number) => {
+      return apiRequest("DELETE", `/api/integration-mappings/${mappingId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/integration-mappings"] });
+      setMappingToDelete(null);
+      toast({
+        title: "Éxito",
+        description: "Mapeo de integración eliminado correctamente",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Error al eliminar mapeo de integración: ${error}`,
+        variant: "destructive",
+      });
+      setMappingToDelete(null);
+    },
+  });
 
   // Handle create mapping form submission
   const handleCreateMapping = () => {
@@ -129,6 +155,11 @@ const DataBridge = () => {
   // Handle sync data for a mapping
   const handleSyncData = (mappingId: number) => {
     syncDataMutation.mutate(mappingId);
+  };
+  
+  // Handle delete mapping
+  const handleDeleteMapping = (mappingId: number) => {
+    setMappingToDelete(mappingId);
   };
 
   // Format time ago
@@ -156,6 +187,35 @@ const DataBridge = () => {
 
   return (
     <div className="p-6 bg-neutral-lightest">
+      {/* Diálogo de confirmación para eliminar mapeo */}
+      <Dialog open={mappingToDelete !== null} onOpenChange={(open) => !open && setMappingToDelete(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmar eliminación</DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas eliminar este mapeo de integración? 
+              Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button variant="outline" onClick={() => setMappingToDelete(null)}>
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => {
+                if (mappingToDelete !== null) {
+                  deleteMappingMutation.mutate(mappingToDelete);
+                }
+              }}
+              disabled={deleteMappingMutation.isPending}
+            >
+              {deleteMappingMutation.isPending ? "Eliminando..." : "Eliminar"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold">Data Bridge</h2>
         
@@ -343,8 +403,9 @@ const DataBridge = () => {
                               variant="outline" 
                               size="sm"
                               className="text-red-500 border-red-200 hover:bg-red-50"
+                              onClick={() => handleDeleteMapping(mapping.id)}
                             >
-                              Delete
+                              Eliminar
                             </Button>
                           </TableCell>
                         </TableRow>

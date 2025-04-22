@@ -71,8 +71,38 @@ const Header = () => {
             className="py-1.5 pl-8 pr-4 w-64"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && searchQuery.trim()) {
+                toast({
+                  title: "Búsqueda realizada",
+                  description: `Buscando: "${searchQuery}"`,
+                });
+                
+                // Lógica para búsqueda según el término
+                if (searchQuery.toLowerCase().includes('mongo')) {
+                  navigate('/mongodb/collections');
+                } else if (searchQuery.toLowerCase().includes('neo4j')) {
+                  navigate('/neo4j/graphs');
+                } else if (searchQuery.toLowerCase().includes('sync') || searchQuery.toLowerCase().includes('sinc')) {
+                  navigate('/integration/sync-history');
+                }
+                
+                // Limpiamos el campo de búsqueda después de buscar
+                setTimeout(() => setSearchQuery(''), 300);
+              }
+            }}
           />
-          <Search className="absolute left-2.5 top-2 h-4 w-4 text-neutral-medium" />
+          <Search 
+            className="absolute left-2.5 top-2 h-4 w-4 text-neutral-medium cursor-pointer" 
+            onClick={() => {
+              if (searchQuery.trim()) {
+                toast({
+                  title: "Búsqueda realizada",
+                  description: `Buscando: "${searchQuery}"`,
+                });
+              }
+            }}
+          />
         </div>
         
         {/* User Menu */}
@@ -87,11 +117,38 @@ const Header = () => {
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem>Perfil</DropdownMenuItem>
-            <DropdownMenuItem>Configuración</DropdownMenuItem>
-            <DropdownMenuItem>Ayuda</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => {
+              toast({
+                title: "Perfil de usuario",
+                description: "Funcionalidad de perfil en desarrollo.",
+              });
+            }}>Perfil</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => {
+              toast({
+                title: "Configuración",
+                description: "Ajustes de aplicación en desarrollo.",
+              });
+            }}>Configuración</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => {
+              toast({
+                title: "Centro de ayuda",
+                description: "Documentación y soporte en desarrollo.",
+              });
+            }}>Ayuda</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-500">Cerrar Sesión</DropdownMenuItem>
+            <DropdownMenuItem 
+              className="text-red-500"
+              onClick={() => {
+                toast({
+                  title: "Sesión cerrada",
+                  description: "Has cerrado sesión correctamente.",
+                });
+                // En una aplicación real, aquí se llamaría a una API de cierre de sesión
+                setTimeout(() => navigate('/'), 1500);
+              }}
+            >
+              Cerrar Sesión
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
