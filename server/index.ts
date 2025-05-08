@@ -4,6 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { MongoClient } from "mongodb";
 import path from "path";
 import { fileURLToPath } from 'url';
+import seedMongoDB from './seed-data';
 
 // ES Modules equivalente a __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -131,6 +132,13 @@ async function createIndexes() {
   connectToMongoDB().then(connected => {
     if (connected) {
       log("MongoDB está disponible y listo para usar");
+      
+      // Sembrar datos iniciales si es necesario
+      seedMongoDB().then(seeded => {
+        if (seeded) {
+          log("Datos iniciales sembrados en MongoDB");
+        }
+      });
     } else {
       log("El servidor está usando almacenamiento en memoria");
     }

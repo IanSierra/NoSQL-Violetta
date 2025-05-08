@@ -465,6 +465,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Ruta para verificar el estado de la base de datos
+  app.get("/api/system/status", async (req: Request, res: Response) => {
+    try {
+      const mongoConnected = app.get("mongoConnected") === true;
+      
+      const storageType = mongoConnected ? "MongoDB" : "Memoria";
+      const status = {
+        sistema: "Violetta Inventario",
+        version: "1.0.0",
+        storage: storageType,
+        mongodb_connected: mongoConnected,
+        uptime: process.uptime()
+      };
+      
+      res.json(status);
+    } catch (error) {
+      res.status(500).json({ message: "Error al obtener estado del sistema", error: String(error) });
+    }
+  });
+
   // Dashboard Data
   app.get("/api/dashboard/stats", async (req: Request, res: Response) => {
     try {

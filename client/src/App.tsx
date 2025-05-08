@@ -13,6 +13,7 @@ import ClientesPage from "./pages/inventory/ClientesPage";
 import TransaccionesPage from "./pages/inventory/TransaccionesPage";
 import ReportesPage from "./pages/inventory/ReportesPage";
 import ConfiguracionPage from "./pages/inventory/ConfiguracionPage";
+import DatabasePage from "./pages/configuration/DatabasePage";
 
 // Página de autenticación
 const AuthPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Iniciar Sesión</h1><p>Esta página de autenticación se implementará próximamente</p></div>;
