@@ -6,6 +6,15 @@ import {
   Evento, EventoInsert
 } from "@shared/schema";
 
+// Reexportar los tipos para que puedan ser usados por otros módulos
+export type {
+  Producto, ProductoInsert,
+  Cliente, ClienteInsert,
+  Transaccion, TransaccionInsert,
+  Usuario, UsuarioInsert,
+  Evento, EventoInsert
+};
+
 // Interfaz para las operaciones de almacenamiento de la base de datos MongoDB
 export interface IStorage {
   // Operaciones de Productos
@@ -392,7 +401,7 @@ export class MemStorage implements IStorage {
     const nuevoUsuario: Usuario = {
       ...usuario,
       _id: id,
-      ultimoAcceso: null,
+      ultimoAcceso: undefined,
       createdAt: now,
       updatedAt: now
     };

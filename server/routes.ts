@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { mongoStorage } from "./mongodb-storage";
 import { 
   productoSchema, 
   clienteSchema, 
@@ -12,11 +13,15 @@ import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+  
+  // Usar la implementación de almacenamiento adecuada
+  // Si la conexión a MongoDB falla, usaremos el almacenamiento en memoria
+  const db = (app.get("mongoConnected") === true) ? mongoStorage : storage;
 
   // Rutas para Productos
   app.get("/api/productos", async (req: Request, res: Response) => {
     try {
-      const productos = await storage.getProductos();
+      const productos = await db.getProductos();
       res.json(productos);
     } catch (error) {
       res.status(500).json({ message: "Error al obtener productos", error: String(error) });
@@ -26,7 +31,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/productos/:id", async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
-      const producto = await storage.getProducto(id);
+      const producto = await db.getProducto(id);
       
       if (!producto) {
         return res.status(404).json({ message: "Producto no encontrado" });
@@ -46,7 +51,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Datos de producto inválidos", errors: parsed.error.format() });
       }
       
-      const producto = await storage.createProducto(parsed.data);
+      const producto = await db.createProducto(parsed.data);
       res.status(201).json(producto);
     } catch (error) {
       res.status(500).json({ message: "Error al crear producto", error: String(error) });
@@ -62,7 +67,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Datos de actualización inválidos", errors: parsed.error.format() });
       }
       
-      const productoActualizado = await storage.updateProducto(id, parsed.data);
+      const productoActualizado = await db.updateProducto(id, parsed.data);
       
       if (!productoActualizado) {
         return res.status(404).json({ message: "Producto no encontrado" });
@@ -77,7 +82,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/productos/:id", async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
-      const deleted = await storage.deleteProducto(id);
+      const deleted = await db.deleteProducto(id);
       
       if (!deleted) {
         return res.status(404).json({ message: "Producto no encontrado" });
@@ -94,7 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const categoria = req.params.categoria;
       const stockMinimo = parseInt(req.query.stockMinimo as string) || 5;
       
-      const productos = await storage.getProductosByCategoriaAndStock(categoria, stockMinimo);
+      const productos = await db.getProductosByCategoriaAndStock(categoria, stockMinimo);
       res.json(productos);
     } catch (error) {
       res.status(500).json({ message: "Error al obtener productos con bajo stock", error: String(error) });
@@ -104,7 +109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rutas para Clientes
   app.get("/api/clientes", async (req: Request, res: Response) => {
     try {
-      const clientes = await storage.getClientes();
+      const clientes = await db.getClientes();
       res.json(clientes);
     } catch (error) {
       res.status(500).json({ message: "Error al obtener clientes", error: String(error) });
@@ -114,7 +119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clientes/:id", async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
-      const cliente = await storage.getCliente(id);
+      const cliente = await db.getCliente(id);
       
       if (!cliente) {
         return res.status(404).json({ message: "Cliente no encontrado" });
@@ -134,7 +139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Datos de cliente inválidos", errors: parsed.error.format() });
       }
       
-      const cliente = await storage.createCliente(parsed.data);
+      const cliente = await db.createCliente(parsed.data);
       res.status(201).json(cliente);
     } catch (error) {
       res.status(500).json({ message: "Error al crear cliente", error: String(error) });
@@ -150,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Datos de actualización inválidos", errors: parsed.error.format() });
       }
       
-      const clienteActualizado = await storage.updateCliente(id, parsed.data);
+      const clienteActualizado = await db.updateCliente(id, parsed.data);
       
       if (!clienteActualizado) {
         return res.status(404).json({ message: "Cliente no encontrado" });
@@ -165,7 +170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/clientes/:id", async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
-      const deleted = await storage.deleteCliente(id);
+      const deleted = await db.deleteCliente(id);
       
       if (!deleted) {
         return res.status(404).json({ message: "Cliente no encontrado" });
@@ -184,9 +189,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let transacciones;
       if (tipo) {
-        transacciones = await storage.getTransaccionesByTipo(tipo);
+        transacciones = await db.getTransaccionesByTipo(tipo);
       } else {
-        transacciones = await storage.getTransacciones();
+        transacciones = await db.getTransacciones();
       }
       
       res.json(transacciones);
@@ -198,7 +203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/transacciones/:id", async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
-      const transaccion = await storage.getTransaccion(id);
+      const transaccion = await db.getTransaccion(id);
       
       if (!transaccion) {
         return res.status(404).json({ message: "Transacción no encontrada" });
@@ -213,7 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/transacciones/cliente/:clienteId", async (req: Request, res: Response) => {
     try {
       const clienteId = req.params.clienteId;
-      const transacciones = await storage.getTransaccionesByCliente(clienteId);
+      const transacciones = await db.getTransaccionesByCliente(clienteId);
       res.json(transacciones);
     } catch (error) {
       res.status(500).json({ message: "Error al obtener transacciones del cliente", error: String(error) });
@@ -228,7 +233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Datos de transacción inválidos", errors: parsed.error.format() });
       }
       
-      const transaccion = await storage.createTransaccion(parsed.data);
+      const transaccion = await db.createTransaccion(parsed.data);
       res.status(201).json(transaccion);
     } catch (error) {
       res.status(500).json({ message: "Error al crear transacción", error: String(error) });
@@ -244,7 +249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Datos de actualización inválidos", errors: parsed.error.format() });
       }
       
-      const transaccionActualizada = await storage.updateTransaccion(id, parsed.data);
+      const transaccionActualizada = await db.updateTransaccion(id, parsed.data);
       
       if (!transaccionActualizada) {
         return res.status(404).json({ message: "Transacción no encontrada" });
@@ -259,7 +264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/transacciones/:id", async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
-      const deleted = await storage.deleteTransaccion(id);
+      const deleted = await db.deleteTransaccion(id);
       
       if (!deleted) {
         return res.status(404).json({ message: "Transacción no encontrada" });
@@ -274,7 +279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rutas para Usuarios
   app.get("/api/usuarios", async (req: Request, res: Response) => {
     try {
-      const usuarios = await storage.getUsuarios();
+      const usuarios = await db.getUsuarios();
       // No enviar las contraseñas al cliente
       const usuariosSinPassword = usuarios.map(usuario => {
         const { password, ...usuarioSinPassword } = usuario;
@@ -289,7 +294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/usuarios/:id", async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
-      const usuario = await storage.getUsuario(id);
+      const usuario = await db.getUsuario(id);
       
       if (!usuario) {
         return res.status(404).json({ message: "Usuario no encontrado" });
@@ -312,12 +317,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Verificar si ya existe un usuario con el mismo email
-      const usuarioExistente = await storage.getUsuarioByEmail(parsed.data.email);
+      const usuarioExistente = await db.getUsuarioByEmail(parsed.data.email);
       if (usuarioExistente) {
         return res.status(400).json({ message: "Ya existe un usuario con este email" });
       }
       
-      const usuario = await storage.createUsuario(parsed.data);
+      const usuario = await db.createUsuario(parsed.data);
       
       // No enviar la contraseña al cliente
       const { password, ...usuarioSinPassword } = usuario;
@@ -338,13 +343,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Si se está actualizando el email, verificar que no exista otro usuario con ese email
       if (parsed.data.email) {
-        const usuarioConEmail = await storage.getUsuarioByEmail(parsed.data.email);
+        const usuarioConEmail = await db.getUsuarioByEmail(parsed.data.email);
         if (usuarioConEmail && usuarioConEmail._id !== id) {
           return res.status(400).json({ message: "Ya existe otro usuario con este email" });
         }
       }
       
-      const usuarioActualizado = await storage.updateUsuario(id, parsed.data);
+      const usuarioActualizado = await db.updateUsuario(id, parsed.data);
       
       if (!usuarioActualizado) {
         return res.status(404).json({ message: "Usuario no encontrado" });
@@ -361,7 +366,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/usuarios/:id", async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
-      const deleted = await storage.deleteUsuario(id);
+      const deleted = await db.deleteUsuario(id);
       
       if (!deleted) {
         return res.status(404).json({ message: "Usuario no encontrado" });
@@ -388,7 +393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { email, password } = parsed.data;
-      const usuario = await storage.authenticateUsuario(email, password);
+      const usuario = await db.authenticateUsuario(email, password);
       
       if (!usuario) {
         return res.status(401).json({ message: "Credenciales inválidas" });
@@ -398,7 +403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { password: _, ...usuarioSinPassword } = usuario;
       
       // Registrar evento de inicio de sesión
-      await storage.createEvento({
+      await db.createEvento({
         tipo: "login",
         usuario: usuario._id!,
         descripcion: `Inicio de sesión del usuario ${usuario.nombre} (${usuario.email})`,
@@ -418,7 +423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rutas para Eventos (Bitácora)
   app.get("/api/eventos", async (req: Request, res: Response) => {
     try {
-      const eventos = await storage.getEventos();
+      const eventos = await db.getEventos();
       res.json(eventos);
     } catch (error) {
       res.status(500).json({ message: "Error al obtener eventos", error: String(error) });
@@ -428,7 +433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/eventos/usuario/:usuarioId", async (req: Request, res: Response) => {
     try {
       const usuarioId = req.params.usuarioId;
-      const eventos = await storage.getEventosByUsuario(usuarioId);
+      const eventos = await db.getEventosByUsuario(usuarioId);
       res.json(eventos);
     } catch (error) {
       res.status(500).json({ message: "Error al obtener eventos del usuario", error: String(error) });
@@ -438,7 +443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/eventos/entidad/:entidad/:entidadId", async (req: Request, res: Response) => {
     try {
       const { entidad, entidadId } = req.params;
-      const eventos = await storage.getEventosByEntidad(entidad, entidadId);
+      const eventos = await db.getEventosByEntidad(entidad, entidadId);
       res.json(eventos);
     } catch (error) {
       res.status(500).json({ message: "Error al obtener eventos de la entidad", error: String(error) });
@@ -453,7 +458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Datos de evento inválidos", errors: parsed.error.format() });
       }
       
-      const evento = await storage.createEvento(parsed.data);
+      const evento = await db.createEvento(parsed.data);
       res.status(201).json(evento);
     } catch (error) {
       res.status(500).json({ message: "Error al crear evento", error: String(error) });
@@ -463,9 +468,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard Data
   app.get("/api/dashboard/stats", async (req: Request, res: Response) => {
     try {
-      const productos = await storage.getProductos();
-      const clientes = await storage.getClientes();
-      const transacciones = await storage.getTransacciones();
+      const productos = await db.getProductos();
+      const clientes = await db.getClientes();
+      const transacciones = await db.getTransacciones();
       
       // Total de productos
       const totalProductos = productos.length;
@@ -502,7 +507,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/dashboard/productos-bajo-stock", async (req: Request, res: Response) => {
     try {
-      const productos = await storage.getProductos();
+      const productos = await db.getProductos();
       const bajosDeStock = productos
         .filter(p => p.stock <= p.stockMinimo)
         .sort((a, b) => a.stock - b.stock); // Ordenar por stock ascendente
@@ -515,7 +520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/dashboard/ventas-recientes", async (req: Request, res: Response) => {
     try {
-      const transacciones = await storage.getTransacciones();
+      const transacciones = await db.getTransacciones();
       const ventasRecientes = transacciones
         .filter(t => t.tipo === 'venta')
         .sort((a, b) => {
@@ -528,7 +533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Obtener información del cliente para cada venta
       const ventasConCliente = await Promise.all(
         ventasRecientes.map(async (venta) => {
-          const cliente = await storage.getCliente(venta.clienteId);
+          const cliente = await db.getCliente(venta.clienteId);
           return {
             ...venta,
             cliente: cliente ? { nombre: cliente.nombre, apellidos: cliente.apellidos } : null
@@ -545,7 +550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/dashboard/proximas-devoluciones", async (req: Request, res: Response) => {
     try {
       const hoy = new Date();
-      const transacciones = await storage.getTransacciones();
+      const transacciones = await db.getTransacciones();
       
       // Obtener rentas con fecha de devolución próxima (en los próximos 7 días)
       const proximaSemana = new Date();
@@ -567,7 +572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Obtener información del cliente para cada renta
       const devolucionesConCliente = await Promise.all(
         proximasDevoluciones.map(async (renta) => {
-          const cliente = await storage.getCliente(renta.clienteId);
+          const cliente = await db.getCliente(renta.clienteId);
           return {
             ...renta,
             cliente: cliente ? { nombre: cliente.nombre, apellidos: cliente.apellidos } : null
