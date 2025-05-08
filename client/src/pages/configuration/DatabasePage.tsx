@@ -194,10 +194,10 @@ export default function DatabasePage() {
                     </>
                   ) : (
                     <>
-                      <Alert variant="warning">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Usando almacenamiento en memoria</AlertTitle>
-                        <AlertDescription>
+                      <Alert className="bg-yellow-50 border-yellow-200">
+                        <AlertCircle className="h-4 w-4 text-yellow-600" />
+                        <AlertTitle className="text-yellow-800">Usando almacenamiento en memoria</AlertTitle>
+                        <AlertDescription className="text-yellow-700">
                           El sistema está operando con datos temporales en memoria.
                           Los datos se perderán cuando el servidor se reinicie.
                         </AlertDescription>
