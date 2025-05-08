@@ -6,15 +6,16 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Layout from "./components/layout/layout";
 
-// Importación simulada de nuestras páginas (las crearemos más adelante)
-// Para simplificar, temporalmente las definimos como componentes básicos
-const DashboardPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Dashboard</h1><p>Bienvenido al sistema de gestión de inventario Violetta</p></div>;
-const ProductosPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Gestión de Productos</h1></div>;
-const ClientesPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Gestión de Clientes</h1></div>;
-const TransaccionesPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Transacciones</h1></div>;
-const ReportesPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Reportes</h1></div>;
-const ConfiguracionPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Configuración</h1></div>;
-const AuthPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Iniciar Sesión</h1></div>;
+// Importación de las páginas del sistema
+import DashboardPage from "./pages/inventory/DashboardPage";
+import ProductosPage from "./pages/inventory/ProductosPage";
+import ClientesPage from "./pages/inventory/ClientesPage";
+import TransaccionesPage from "./pages/inventory/TransaccionesPage";
+import ReportesPage from "./pages/inventory/ReportesPage";
+import ConfiguracionPage from "./pages/inventory/ConfiguracionPage";
+
+// Página de autenticación
+const AuthPage = () => <div className="p-6"><h1 className="text-2xl font-bold">Iniciar Sesión</h1><p>Esta página de autenticación se implementará próximamente</p></div>;
 
 function Router() {
   // Simulamos un estado de autenticación (siempre autenticado para este ejemplo)
